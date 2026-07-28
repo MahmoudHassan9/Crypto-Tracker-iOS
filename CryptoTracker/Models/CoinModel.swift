@@ -9,7 +9,7 @@ import Foundation
 
 /*
  curl --request GET \
-   --url 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin&names=Bitcoin&symbols=btc&per_page=250&page=1&sparkline=true&price_change_percentage=24h' \
+   --url 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=true&price_change_percentage=24h' \
    --header 'x-cg-demo-api-key: CG-L21aEybKhwef4zUdKATd832N'
  */
 

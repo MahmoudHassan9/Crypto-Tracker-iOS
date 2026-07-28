@@ -13,14 +13,28 @@ class HomeViewModel: ObservableObject {
     @Published var allCoinsList: [CoinModel] = []
     @Published var portfolioCoinsList: [CoinModel] = []
 
-    init() {
+    private let homeRepo: HomeRepoProtocol
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            self.allCoinsList.append(CoinModel.fakeCoin)
-            self.allCoinsList.append(CoinModel.fakeCoin)
-            self.portfolioCoinsList.append(CoinModel.fakeCoin)
+    private var cancellables: Set<AnyCancellable> = []
 
-        }
+    init(
+        homeRepo: HomeRepoProtocol
+    ) {
+        self.homeRepo = homeRepo
+        getCoins()
+    }
+
+    func getCoins() {
+
+        homeRepo
+            .getCoins()
+            .replaceError(with: [])
+            .sink(
+                receiveValue: { [weak self] coins in
+                    self?.allCoinsList = coins
+                }
+            )
+            .store(in: &cancellables)
 
     }
 

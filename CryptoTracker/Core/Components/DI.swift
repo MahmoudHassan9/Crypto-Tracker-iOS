@@ -8,5 +8,10 @@
 import Foundation
 
 struct DI {
-    static let homeViewMOdel: HomeViewModel = HomeViewModel()
+    static let homeViewMOdel: HomeViewModel = HomeViewModel(
+        homeRepo: HomeRepoImp(
+            apiCLient: HomeAPIClient()
+        )
+    )
+
 }
