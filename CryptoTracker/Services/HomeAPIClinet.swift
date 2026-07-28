@@ -7,14 +7,27 @@
 
 import Combine
 import Foundation
+import SwiftUI
 
 protocol HomeAPIClientProtocol {
 
     func getCoins() -> AnyPublisher<[CoinModel], Error>
+    func getCoinImage(urlString: String) -> AnyPublisher<Data, Error>
 
 }
 
 struct HomeAPIClient: HomeAPIClientProtocol {
+
+    func getCoinImage(urlString: String) -> AnyPublisher<Data, Error> {
+        let url = URL(
+            string:
+                urlString
+        )!
+
+        return NetworkingManager.execute(url: url)
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
 
     private let url = URL(
         string:
