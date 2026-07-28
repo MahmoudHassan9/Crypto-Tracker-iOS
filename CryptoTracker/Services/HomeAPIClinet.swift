@@ -22,8 +22,7 @@ struct HomeAPIClient: HomeAPIClientProtocol {
     )!
 
     func getCoins() -> AnyPublisher<[CoinModel], Error> {
-        return URLSession.shared.dataTaskPublisher(for: url)
-            .map(\.data)
+        return NetworkingManager.execute(url: url)
             .decode(type: [CoinModel].self, decoder: JSONDecoder())
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()

@@ -128,7 +128,7 @@ extension HomeView {
     NavigationStack {
         HomeView()
     }
-    .environmentObject(DI.homeViewMOdel)
+    .environmentObject(DIContainer.homeViewModel)
     .toolbar(.hidden)
 }
 
@@ -136,7 +136,7 @@ extension HomeView {
     NavigationStack {
         HomeView()
     }
-    .environmentObject(DI.homeViewMOdel)
+    .environmentObject(DIContainer.homeViewModel)
     .toolbar(.hidden)
     .preferredColorScheme(.dark)
 }

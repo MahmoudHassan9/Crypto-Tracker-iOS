@@ -7,8 +7,8 @@
 
 import Foundation
 
-struct DI {
-    static let homeViewMOdel: HomeViewModel = HomeViewModel(
+struct DIContainer {
+    static let homeViewModel: HomeViewModel = HomeViewModel(
         homeRepo: HomeRepoImp(
             apiCLient: HomeAPIClient()
         )

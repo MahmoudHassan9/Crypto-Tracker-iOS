@@ -9,11 +9,8 @@ import SwiftUI
 
 @main
 struct CryptoTrackerApp: App {
-    @StateObject private var homeViewModel: HomeViewModel = HomeViewModel(
-        homeRepo: HomeRepoImp(
-            apiCLient: HomeAPIClient()
-        )
-    )
+    @StateObject private var homeViewModel: HomeViewModel = DIContainer
+        .homeViewModel
 
     var body: some Scene {
         WindowGroup {
