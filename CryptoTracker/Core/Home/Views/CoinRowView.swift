@@ -86,12 +86,17 @@ extension CoinRowView {
     }
 }
 
-#Preview {
-    Group {
-        CoinRowView(
-            coinModel: CoinModel.fakeCoin,
-            showHolding: true
-        )
+#Preview("Light", traits: .sizeThatFitsLayout) {
+    CoinRowView(
+        coinModel: .fakeCoin,
+        showHolding: true
+    )
+}
 
-    }
+#Preview("Dark") {
+    CoinRowView(
+        coinModel: .fakeCoin,
+        showHolding: true
+    )
+    .preferredColorScheme(.dark)
 }
