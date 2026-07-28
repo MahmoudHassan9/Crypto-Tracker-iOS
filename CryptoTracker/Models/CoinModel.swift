@@ -131,3 +131,42 @@ struct SparklineIn7D: Codable {
         case price = "price"
     }
 }
+
+extension CoinModel {
+    static let fakeCoin = CoinModel(
+        id: "bitcoin",
+        symbol: "btc",
+        name: "Bitcoin",
+        image: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
+        currentPrice: 100_000,
+        marketCap: 2_000_000_000_000,
+        marketCapRank: 1,
+        fullyDilutedValuation: 2_100_000_000_000,
+        totalVolume: 35_000_000_000,
+        high24H: 101_500,
+        low24H: 98_500,
+        priceChange24H: 1_500,
+        priceChangePercentage24H: 1.52,
+        marketCapChange24H: 25_000_000_000,
+        marketCapChangePercentage24H: 1.27,
+        circulatingSupply: 19_900_000,
+        totalSupply: 21_000_000,
+        maxSupply: 21_000_000,
+        ath: 109_114,
+        athChangePercentage: -8.35,
+        athDate: "2025-01-20T00:00:00.000Z",
+        atl: 67.81,
+        atlChangePercentage: 147300.5,
+        atlDate: "2013-07-06T00:00:00.000Z",
+        lastUpdated: "2026-07-28T12:00:00.000Z",
+        sparklineIn7D: SparklineIn7D(
+            price: [
+                98000, 98500, 99000, 99500,
+                100000, 100500, 101000, 100500,
+                100000, 99500, 100200, 100000,
+            ]
+        ),
+        priceChangePercentage24HInCurrency: 1.52,
+        currentHolding: 10
+    )
+}
