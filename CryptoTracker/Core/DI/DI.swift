@@ -10,8 +10,9 @@ import Foundation
 struct DIContainer {
     static let homeViewModel: HomeViewModel = HomeViewModel(
         homeRepo: HomeRepoImp(
-            apiCLient: HomeAPIClient()
-        )
+            apiCLient: HomeAPIClient(),
+            imageCache: ImageCache()
+        ),
     )
 
 }

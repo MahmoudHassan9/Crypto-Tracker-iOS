@@ -13,13 +13,11 @@ class HomeViewModel: ObservableObject {
 
     @Published var allCoinsList: [CoinModel] = []
     @Published var portfolioCoinsList: [CoinModel] = []
-
     @Published var coinImages: [String: UIImage] = [:]
     @Published var loadingImageURLs: Set<String> = []
+    private var cancellables: Set<AnyCancellable> = []
 
     private let homeRepo: HomeRepoProtocol
-
-    private var cancellables: Set<AnyCancellable> = []
 
     init(
         homeRepo: HomeRepoProtocol

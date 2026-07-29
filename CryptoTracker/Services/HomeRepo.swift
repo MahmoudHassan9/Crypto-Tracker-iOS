@@ -16,13 +16,33 @@ protocol HomeRepoProtocol {
 struct HomeRepoImp: HomeRepoProtocol {
 
     private let apiCLient: HomeAPIClientProtocol
+    private let imageCache: CacheProtocol
 
-    init(apiCLient: HomeAPIClientProtocol) {
+    init(
+        apiCLient: HomeAPIClientProtocol,
+        imageCache: CacheProtocol
+    ) {
         self.apiCLient = apiCLient
+        self.imageCache = imageCache
     }
+
     func getCoinImage(urlString: String) -> AnyPublisher<Data, Error> {
-        apiCLient.getCoinImage(urlString: urlString)
+
+        if let cached = imageCache.data(for: urlString) {
+            print("cacheddd !")
+            return Just(cached)
+                .setFailureType(to: Error.self)
+                .eraseToAnyPublisher()
+        }
+
+        return apiCLient.getCoinImage(urlString: urlString)
+            .handleEvents(receiveOutput: { data in
+                print("cachingggg !")
+                imageCache.insertData(data, for: urlString)
+            })
+            .eraseToAnyPublisher()
     }
+
     func getCoins() -> AnyPublisher<[CoinModel], any Error> {
         apiCLient.getCoins()
     }
