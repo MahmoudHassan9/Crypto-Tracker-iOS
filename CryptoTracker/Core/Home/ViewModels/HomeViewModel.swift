@@ -15,6 +15,8 @@ class HomeViewModel: ObservableObject {
     @Published var portfolioCoinsList: [CoinModel] = []
     @Published var coinImages: [String: UIImage] = [:]
     @Published var loadingImageURLs: Set<String> = []
+    @Published var searchText: String = ""
+    @Published var filteredCoins: [CoinModel] = []
     private var cancellables: Set<AnyCancellable> = []
 
     private let homeRepo: HomeRepoProtocol
@@ -23,7 +25,49 @@ class HomeViewModel: ObservableObject {
         homeRepo: HomeRepoProtocol
     ) {
         self.homeRepo = homeRepo
+        addSubscribers()
+    }
+
+    func addSubscribers() {
         getCoins()
+        observeSearch()
+    }
+
+    func observeSearch() {
+        $searchText
+            .combineLatest($allCoinsList)
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .map(filterCoins)
+            .sink { [weak self] coins in
+                self?.filteredCoins = coins
+            }
+            .store(in: &cancellables)
+    }
+
+    private func filterCoins(text: String, coins: [CoinModel]) -> [CoinModel] {
+        guard !text.isEmpty else {
+            return coins
+        }
+
+        let lowercasedText = text.lowercased()
+
+        return coins.filter { coin in
+            (coin.name?.lowercased().contains(lowercasedText) ?? false)
+                || (coin.symbol?.lowercased().contains(lowercasedText) ?? false)
+                || (coin.id?.lowercased().contains(lowercasedText) ?? false)
+        }
+    }
+    private func getCoins() {
+        homeRepo
+            .getCoins()
+            .replaceError(with: [])
+            .sink(
+                receiveValue: { [weak self] coins in
+                    self?.allCoinsList = coins
+                    self?.filteredCoins = coins
+                }
+            )
+            .store(in: &cancellables)
     }
 
     func getCoinImage(for url: String) {
@@ -42,18 +86,6 @@ class HomeViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-    }
-
-    func getCoins() {
-        homeRepo
-            .getCoins()
-            .replaceError(with: [])
-            .sink(
-                receiveValue: { [weak self] coins in
-                    self?.allCoinsList = coins
-                }
-            )
-            .store(in: &cancellables)
     }
 
 }
