@@ -82,7 +82,7 @@ struct CoinModel: Identifiable, Codable {
             currentHolding: price,
         )
     }
-    var currentHoldingValue: Double {
+    var currentHoldingsValue: Double {
         return (currentHolding ?? 0) * (currentPrice ?? 0)
     }
 

@@ -11,6 +11,8 @@ import Foundation
 protocol HomeRepoProtocol {
     func getCoins() -> AnyPublisher<[CoinModel], Error>
     func getCoinImage(urlString: String) -> AnyPublisher<Data, Error>
+    func getMarketStats() -> AnyPublisher<GlobalData, Error>
+
 }
 
 struct HomeRepoImp: HomeRepoProtocol {
@@ -24,6 +26,10 @@ struct HomeRepoImp: HomeRepoProtocol {
     ) {
         self.apiCLient = apiCLient
         self.imageCache = imageCache
+    }
+
+    func getMarketStats() -> AnyPublisher<GlobalData, any Error> {
+        apiCLient.getMarketStats()
     }
 
     func getCoinImage(urlString: String) -> AnyPublisher<Data, Error> {

@@ -11,6 +11,8 @@ import SwiftUI
 
 class HomeViewModel: ObservableObject {
 
+    @Published var coinsIsLoading: Bool = false
+    @Published var statistics: [StatisticModel] = []
     @Published var allCoinsList: [CoinModel] = []
     @Published var portfolioCoinsList: [CoinModel] = []
     @Published var coinImages: [String: UIImage] = [:]
@@ -31,6 +33,7 @@ class HomeViewModel: ObservableObject {
     func addSubscribers() {
         getCoins()
         observeSearch()
+        getMarketStats()
     }
 
     func observeSearch() {
@@ -44,24 +47,24 @@ class HomeViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func filterCoins(text: String, coins: [CoinModel]) -> [CoinModel] {
-        guard !text.isEmpty else {
-            return coins
-        }
-
-        let lowercasedText = text.lowercased()
-
-        return coins.filter { coin in
-            (coin.name?.lowercased().contains(lowercasedText) ?? false)
-                || (coin.symbol?.lowercased().contains(lowercasedText) ?? false)
-                || (coin.id?.lowercased().contains(lowercasedText) ?? false)
-        }
+    func getMarketStats() {
+        homeRepo.getMarketStats()
+            .map(mapGlobalMarketData)
+            .replaceError(with: [])
+            .sink { [weak self] (returnedStats) in
+                self?.statistics = returnedStats
+            }
+            .store(in: &cancellables)
     }
+
     private func getCoins() {
+        coinsIsLoading = true
         homeRepo
             .getCoins()
-            .replaceError(with: [])
             .sink(
+                receiveCompletion: { [weak self] _ in
+                    self?.coinsIsLoading = false
+                },
                 receiveValue: { [weak self] coins in
                     self?.allCoinsList = coins
                     self?.filteredCoins = coins
@@ -86,6 +89,58 @@ class HomeViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
+    }
+
+    private func mapGlobalMarketData(
+        globalData: GlobalData?,
+    ) -> [StatisticModel] {
+        var stats: [StatisticModel] = []
+
+        guard let globalData = globalData else {
+            return stats
+        }
+
+        let marketCap = StatisticModel(
+            title: "Market Cap",
+            value: globalData.data?.marketCap ?? "",
+            percentageChange: globalData.data?.marketCapChangePercentage24HUsd
+        )
+        let volume = StatisticModel(
+            title: "24h Volume",
+            value: globalData.data?.volume ?? ""
+        )
+        let btcDominance = StatisticModel(
+            title: "BTC Dominance",
+            value: globalData.data?.btcDominance ?? ""
+        )
+
+        let portfolio = StatisticModel(
+            title: "Portfolio Value",
+            value: "$0.00",
+            percentageChange: 0
+        )
+
+        stats.append(contentsOf: [
+            marketCap,
+            volume,
+            btcDominance,
+            portfolio,
+        ])
+        return stats
+    }
+
+    private func filterCoins(text: String, coins: [CoinModel]) -> [CoinModel] {
+        guard !text.isEmpty else {
+            return coins
+        }
+
+        let lowercasedText = text.lowercased()
+
+        return coins.filter { coin in
+            (coin.name?.lowercased().contains(lowercasedText) ?? false)
+                || (coin.symbol?.lowercased().contains(lowercasedText) ?? false)
+                || (coin.id?.lowercased().contains(lowercasedText) ?? false)
+        }
     }
 
 }
