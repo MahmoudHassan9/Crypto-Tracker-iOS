@@ -20,6 +20,7 @@ class HomeViewModel: ObservableObject {
     @Published var loadingImageURLs: Set<String> = []
     @Published var searchText: String = ""
     @Published var filteredCoins: [CoinModel] = []
+    @Published var sortOption: SortOption = .holdings
     private var cancellables: Set<AnyCancellable> = []
 
     private let homeRepo: HomeRepoProtocol
@@ -45,6 +46,8 @@ class HomeViewModel: ObservableObject {
         observePortfolio()
     }
 
+    // MARK: PRIVATE
+
     private func observePortfolio() {
         loadPortfolio()
         $filteredCoins
@@ -52,83 +55,19 @@ class HomeViewModel: ObservableObject {
             .map(mapAllCoinsToPortfolioCoins)
             .sink { [weak self] returnedCoins in
                 guard let self = self else { return }
-                self.portfolioCoinsList = returnedCoins
+                self.portfolioCoinsList = self.sortPortfolioCoinsIfNeeded(
+                    coins: returnedCoins
+                )
             }
             .store(in: &cancellables)
     }
-
-    private func mapAllCoinsToPortfolioCoins(
-        allCoins: [CoinModel],
-        portfolioEntities: [PortfolioEntity]
-    ) -> [CoinModel] {
-        allCoins
-            .compactMap { coin -> CoinModel? in
-                guard
-                    let entity = portfolioEntities.first(where: {
-                        $0.coinID == coin.id
-                    })
-                else {
-                    return nil
-                }
-                return coin.updateHoldings(with: entity.amount)
-            }
-    }
-
-    //    private func sortPortfolioCoinsIfNeeded(coins: [CoinModel]) -> [CoinModel] {
-    //        // will only sort by holdings or reversedholdings if needed
-    //        switch sortOption {
-    //        case .holdings:
-    //            return coins.sorted(by: {
-    //                $0.currentHoldingsValue > $1.currentHoldingsValue
-    //            })
-    //        case .holdingsReversed:
-    //            return coins.sorted(by: {
-    //                $0.currentHoldingsValue < $1.currentHoldingsValue
-    //            })
-    //        default:
-    //            return coins
-    //        }
-    //    }
-    // MARK: PUBLIC
-
-    func updatePortfolio(coin: CoinModel, amount: Double) {
-        do {
-            _ = try portfolioDataService.updatePortfolio(
-                coin: coin,
-                amount: amount
-            )
-            loadPortfolio()  // refresh local state after mutation
-        } catch {
-            print("Failed to update portfolio: \(error)")
-        }
-    }
-
-    // MARK: PRIVATE
-
-    private func loadPortfolio() {
-        do {
-            savedEntities = try portfolioDataService.getPortfolio()
-        } catch {
-            print("Failed to load portfolio: \(error)")
-        }
-    }
-    func observeSearch() {
+    private func observeSearch() {
         $searchText
-            .combineLatest($allCoinsList)
+            .combineLatest($allCoinsList, $sortOption)
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
-            .map(filterCoins)
+            .map(filterAndSortCoins)
             .sink { [weak self] coins in
                 self?.filteredCoins = coins
-            }
-            .store(in: &cancellables)
-    }
-
-    func getMarketStats() {
-        homeRepo.getMarketStats()
-            .map(mapGlobalMarketData)
-            .replaceError(with: [])
-            .sink { [weak self] (returnedStats) in
-                self?.statistics = returnedStats
             }
             .store(in: &cancellables)
     }
@@ -148,27 +87,34 @@ class HomeViewModel: ObservableObject {
             )
             .store(in: &cancellables)
     }
-
-    func getCoinImage(for url: String) {
-        guard coinImages[url] == nil, !loadingImageURLs.contains(url) else {
-            return
+    private func loadPortfolio() {
+        do {
+            savedEntities = try portfolioDataService.getPortfolio()
+        } catch {
+            print("Failed to load portfolio: \(error)")
         }
-        loadingImageURLs.insert(url)
+    }
 
-        homeRepo
-            .getCoinImage(urlString: url)
-            .map { UIImage(data: $0) }
-            .sink { [weak self] (_) in
-                self?.loadingImageURLs.remove(url)
-            } receiveValue: { [weak self] image in
-                self?.coinImages[url] = image
+    private func mapAllCoinsToPortfolioCoins(
+        allCoins: [CoinModel],
+        portfolioEntities: [PortfolioEntity]
+    ) -> [CoinModel] {
+        allCoins
+            .compactMap { coin -> CoinModel? in
+                guard
+                    let entity = portfolioEntities.first(where: {
+                        $0.coinID == coin.id
+                    })
+                else {
+                    return nil
+                }
+                return coin.updateHoldings(with: entity.amount)
             }
-            .store(in: &cancellables)
-
     }
 
     private func mapGlobalMarketData(
         globalData: GlobalData?,
+        portfolioCoins: [CoinModel]
     ) -> [StatisticModel] {
         var stats: [StatisticModel] = []
 
@@ -190,10 +136,28 @@ class HomeViewModel: ObservableObject {
             value: globalData.data?.btcDominance ?? ""
         )
 
+        let portfolioValue =
+            portfolioCoins
+            .map({ $0.currentHoldingsValue })
+            .reduce(0, +)
+
+        let previousValue =
+            portfolioCoins
+            .map { (coin) -> Double in
+                let currentValue = coin.currentHoldingsValue
+                let percentChange = coin.priceChangePercentage24H ?? 0 / 100
+                let previousValue = currentValue / (1 + percentChange)
+                return previousValue
+            }
+            .reduce(0, +)
+
+        let percentageChange =
+            ((portfolioValue - previousValue) / previousValue)
+
         let portfolio = StatisticModel(
             title: "Portfolio Value",
-            value: "$0.00",
-            percentageChange: 0
+            value: portfolioValue.asCurrencyWith2Decimals(),
+            percentageChange: percentageChange
         )
 
         stats.append(contentsOf: [
@@ -203,6 +167,27 @@ class HomeViewModel: ObservableObject {
             portfolio,
         ])
         return stats
+    }
+    private func filterAndSortCoins(
+        text: String,
+        coins: [CoinModel],
+        sort: SortOption
+    ) -> [CoinModel] {
+        var updatedCoins = filterCoins(text: text, coins: coins)
+        sortCoins(sort: sort, coins: &updatedCoins)
+        return updatedCoins
+    }
+    private func sortCoins(sort: SortOption, coins: inout [CoinModel]) {
+        switch sort {
+        case .rank, .holdings:
+            coins.sort(by: { $0.rank < $1.rank })
+        case .rankReversed, .holdingsReversed:
+            coins.sort(by: { $0.rank > $1.rank })
+        case .price:
+            coins.sort(by: { ($0.currentPrice ?? 0) > ($1.currentPrice ?? 0) })
+        case .priceReversed:
+            coins.sort(by: { ($0.currentPrice ?? 0) < ($1.currentPrice ?? 0) })
+        }
     }
 
     private func filterCoins(text: String, coins: [CoinModel]) -> [CoinModel] {
@@ -217,6 +202,74 @@ class HomeViewModel: ObservableObject {
                 || (coin.symbol?.lowercased().contains(lowercasedText) ?? false)
                 || (coin.id?.lowercased().contains(lowercasedText) ?? false)
         }
+    }
+
+    private func sortPortfolioCoinsIfNeeded(coins: [CoinModel]) -> [CoinModel] {
+        // will only sort by holdings or reversedholdings if needed
+        switch sortOption {
+        case .holdings:
+            return coins.sorted(by: {
+                $0.currentHoldingsValue > $1.currentHoldingsValue
+            })
+        case .holdingsReversed:
+            return coins.sorted(by: {
+                $0.currentHoldingsValue < $1.currentHoldingsValue
+            })
+        default:
+            return coins
+        }
+    }
+
+    // MARK: PUBLIC
+
+    func reloadData() {
+        coinsIsLoading = true
+        getCoins()
+        getMarketStats()
+    }
+
+    func updatePortfolio(coin: CoinModel, amount: Double) {
+        do {
+            _ = try portfolioDataService.updatePortfolio(
+                coin: coin,
+                amount: amount
+            )
+            loadPortfolio()  // refresh local state after mutation
+        } catch {
+            print("Failed to update portfolio: \(error)")
+        }
+    }
+    func getMarketStats() {
+        homeRepo.getMarketStats()
+            .catch { error -> AnyPublisher<GlobalData, Never> in
+                print("Failed to fetch market stats: \(error)")
+                return Empty().eraseToAnyPublisher()
+            }
+            .combineLatest($portfolioCoinsList)
+            .map(mapGlobalMarketData)
+            .sink { [weak self] (returnedStats) in
+                self?.statistics = returnedStats
+                self?.coinsIsLoading = false
+            }
+            .store(in: &cancellables)
+    }
+
+    func getCoinImage(for url: String) {
+        guard coinImages[url] == nil, !loadingImageURLs.contains(url) else {
+            return
+        }
+        loadingImageURLs.insert(url)
+
+        homeRepo
+            .getCoinImage(urlString: url)
+            .map { UIImage(data: $0) }
+            .sink { [weak self] (_) in
+                self?.loadingImageURLs.remove(url)
+            } receiveValue: { [weak self] image in
+                self?.coinImages[url] = image
+            }
+            .store(in: &cancellables)
+
     }
 
 }

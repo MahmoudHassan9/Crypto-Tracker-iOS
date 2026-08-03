@@ -107,13 +107,16 @@ extension HomeView {
             }
         }
         .listStyle(.plain)
+        .refreshable {
+            homeViewModel.reloadData()
+        }
 
     }
 
     private var portfolioCoinsList: some View {
         List {
             ForEach(homeViewModel.portfolioCoinsList) { coin in
-                CoinRowView(coinModel: coin, showHolding: false)
+                CoinRowView(coinModel: coin, showHolding: true)
                     .listRowInsets(
                         .init(
                             top: 10,
@@ -130,16 +133,78 @@ extension HomeView {
 
     private var columnTitles: some View {
         HStack {
-            Text("Coin")
+            HStack(spacing: 4) {
+                Text("Coin")
+                Image(systemName: "chevron.down")
+                    .opacity(
+                        (homeViewModel.sortOption == .rank
+                            || homeViewModel.sortOption == .rankReversed)
+                            ? 1.0 : 0.0
+                    )
+                    .rotationEffect(
+                        Angle(
+                            degrees: homeViewModel.sortOption == .rank ? 0 : 180
+                        )
+                    )
+            }
+            .onTapGesture {
+                withAnimation(.default) {
+                    homeViewModel.sortOption =
+                        homeViewModel.sortOption == .rank
+                        ? .rankReversed : .rank
+                }
+            }
             Spacer()
             if showPortfolio {
-                Text("Holdings")
+                HStack(spacing: 4) {
+                    Text("Holdings")
+                    Image(systemName: "chevron.down")
+                        .opacity(
+                            (homeViewModel.sortOption == .holdings
+                                || homeViewModel.sortOption == .holdingsReversed)
+                                ? 1.0 : 0.0
+                        )
+                        .rotationEffect(
+                            Angle(
+                                degrees: homeViewModel.sortOption == .holdings
+                                    ? 0 : 180
+                            )
+                        )
+                }
+                .onTapGesture {
+                    withAnimation(.default) {
+                        homeViewModel.sortOption =
+                            homeViewModel.sortOption == .holdings
+                            ? .holdingsReversed : .holdings
+                    }
+                }
             }
-            Text("Price")
-                .frame(
-                    width: UIScreen.main.bounds.width / 3,
-                    alignment: .trailing
-                )
+            HStack(spacing: 4) {
+                Text("Price")
+                Image(systemName: "chevron.down")
+                    .opacity(
+                        (homeViewModel.sortOption == .price
+                            || homeViewModel.sortOption == .priceReversed)
+                            ? 1.0 : 0.0
+                    )
+                    .rotationEffect(
+                        Angle(
+                            degrees: homeViewModel.sortOption == .price
+                                ? 0 : 180
+                        )
+                    )
+            }
+            .frame(
+                width: UIScreen.main.bounds.width / 3.5,
+                alignment: .trailing
+            )
+            .onTapGesture {
+                withAnimation(.default) {
+                    homeViewModel.sortOption =
+                        homeViewModel.sortOption == .price
+                        ? .priceReversed : .price
+                }
+            }
         }
         .font(.caption)
         .foregroundStyle(Color.theme.secondaryText)
