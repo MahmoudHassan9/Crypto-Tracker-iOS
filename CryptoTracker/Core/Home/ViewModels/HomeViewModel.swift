@@ -13,6 +13,7 @@ class HomeViewModel: ObservableObject {
 
     @Published var coinsIsLoading: Bool = false
     @Published var statistics: [StatisticModel] = []
+    @Published var savedEntities: [PortfolioEntity] = []
     @Published var allCoinsList: [CoinModel] = []
     @Published var portfolioCoinsList: [CoinModel] = []
     @Published var coinImages: [String: UIImage] = [:]
@@ -22,11 +23,18 @@ class HomeViewModel: ObservableObject {
     private var cancellables: Set<AnyCancellable> = []
 
     private let homeRepo: HomeRepoProtocol
+    private let portfolioDataService: PortfolioDataServiceProtocol
+    enum SortOption {
+        case rank, rankReversed, holdings, holdingsReversed, price,
+            priceReversed
+    }
 
     init(
-        homeRepo: HomeRepoProtocol
+        homeRepo: HomeRepoProtocol,
+        portfolioDataService: PortfolioDataServiceProtocol
     ) {
         self.homeRepo = homeRepo
+        self.portfolioDataService = portfolioDataService
         addSubscribers()
     }
 
@@ -34,8 +42,76 @@ class HomeViewModel: ObservableObject {
         getCoins()
         observeSearch()
         getMarketStats()
+        observePortfolio()
     }
 
+    private func observePortfolio() {
+        loadPortfolio()
+        $filteredCoins
+            .combineLatest($savedEntities)
+            .map(mapAllCoinsToPortfolioCoins)
+            .sink { [weak self] returnedCoins in
+                guard let self = self else { return }
+                self.portfolioCoinsList = returnedCoins
+            }
+            .store(in: &cancellables)
+    }
+
+    private func mapAllCoinsToPortfolioCoins(
+        allCoins: [CoinModel],
+        portfolioEntities: [PortfolioEntity]
+    ) -> [CoinModel] {
+        allCoins
+            .compactMap { coin -> CoinModel? in
+                guard
+                    let entity = portfolioEntities.first(where: {
+                        $0.coinID == coin.id
+                    })
+                else {
+                    return nil
+                }
+                return coin.updateHoldings(with: entity.amount)
+            }
+    }
+
+    //    private func sortPortfolioCoinsIfNeeded(coins: [CoinModel]) -> [CoinModel] {
+    //        // will only sort by holdings or reversedholdings if needed
+    //        switch sortOption {
+    //        case .holdings:
+    //            return coins.sorted(by: {
+    //                $0.currentHoldingsValue > $1.currentHoldingsValue
+    //            })
+    //        case .holdingsReversed:
+    //            return coins.sorted(by: {
+    //                $0.currentHoldingsValue < $1.currentHoldingsValue
+    //            })
+    //        default:
+    //            return coins
+    //        }
+    //    }
+    // MARK: PUBLIC
+
+    func updatePortfolio(coin: CoinModel, amount: Double) {
+        do {
+            _ = try portfolioDataService.updatePortfolio(
+                coin: coin,
+                amount: amount
+            )
+            loadPortfolio()  // refresh local state after mutation
+        } catch {
+            print("Failed to update portfolio: \(error)")
+        }
+    }
+
+    // MARK: PRIVATE
+
+    private func loadPortfolio() {
+        do {
+            savedEntities = try portfolioDataService.getPortfolio()
+        } catch {
+            print("Failed to load portfolio: \(error)")
+        }
+    }
     func observeSearch() {
         $searchText
             .combineLatest($allCoinsList)

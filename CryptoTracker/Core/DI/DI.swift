@@ -11,8 +11,9 @@ struct DIContainer {
     static let homeViewModel: HomeViewModel = HomeViewModel(
         homeRepo: HomeRepoImp(
             apiCLient: HomeAPIClient(),
-            imageCache: ImageCache()
+            imageCache: ImageCache(),
         ),
+        portfolioDataService: PortfolioDataService()
     )
 
 }
