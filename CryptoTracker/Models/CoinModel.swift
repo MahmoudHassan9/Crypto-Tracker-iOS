@@ -19,7 +19,7 @@ import Foundation
 //   let coinModel = try? JSONDecoder().decode(CoinModel.self, from: jsonData)
 
 // MARK: - CoinMode
-struct CoinModel: Identifiable, Codable {
+struct CoinModel: Identifiable, Codable, Hashable {
     let id: String?
     let symbol: String?
     let name: String?
@@ -124,7 +124,7 @@ struct CoinModel: Identifiable, Codable {
 }
 
 // MARK: - SparklineIn7D
-struct SparklineIn7D: Codable {
+struct SparklineIn7D: Codable, Hashable {
     let price: [Double]?
 
     enum CodingKeys: String, CodingKey {
