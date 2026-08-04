@@ -13,7 +13,9 @@ final class DetailViewModel: ObservableObject {
 
     @Published var overviewStatistics: [StatisticModel] = []
     @Published var additionalStatistics: [StatisticModel] = []
-    @Published var coinDetailModel: CoinDetailModel?
+    @Published var coinDescription: String? = nil
+    @Published var websiteURL: String? = nil
+    @Published var redditURL: String? = nil
     @Published var isLoading: Bool = false
 
     private var cancellables = Set<AnyCancellable>()
@@ -26,7 +28,7 @@ final class DetailViewModel: ObservableObject {
         getCoinDetails(for: coin.id)
     }
 
-    func getCoinDetails(for id: String?) {
+    private func getCoinDetails(for id: String?) {
         guard let id = id else {
             print("⚠️ coin.id is nil")
             return
@@ -49,6 +51,20 @@ final class DetailViewModel: ObservableObject {
                     self?.additionalStatistics = returnedArrays.additional
                 }
             )
+            .store(in: &cancellables)
+
+        homeRepo
+            .getCoinDetails(id: id)
+            .catch {
+                error -> AnyPublisher<CoinDetailModel, Never> in
+                print("❌ getDetails failed: \(error)")
+                return Empty().eraseToAnyPublisher()
+            }
+            .sink(receiveValue: { [weak self] CoinDetailModel in
+                self?.coinDescription = CoinDetailModel.readableDescription
+                self?.websiteURL = CoinDetailModel.links?.homepage?.first
+                self?.redditURL = CoinDetailModel.links?.subredditURL
+            })
             .store(in: &cancellables)
     }
 
