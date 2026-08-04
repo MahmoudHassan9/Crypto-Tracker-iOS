@@ -14,10 +14,28 @@ protocol HomeAPIClientProtocol {
     func getCoins() -> AnyPublisher<[CoinModel], Error>
     func getCoinImage(urlString: String) -> AnyPublisher<Data, Error>
     func getMarketStats() -> AnyPublisher<GlobalData, Error>
+    func getCoinDetails(id: String) -> AnyPublisher<CoinDetailModel, Error>
 
 }
 
 struct HomeAPIClient: HomeAPIClientProtocol {
+    func getCoinDetails(id: String) -> AnyPublisher<CoinDetailModel, any Error>
+    {
+        guard
+            let url = URL(
+                string:
+                    "https://api.coingecko.com/api/v3/coins/\(id)?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false"
+            )
+        else {
+            return Fail(error: URLError(.badURL))
+                .eraseToAnyPublisher()
+        }
+
+        return NetworkingManager.execute(url: url)
+            .decode(type: CoinDetailModel.self, decoder: JSONDecoder())
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
 
     func getMarketStats() -> AnyPublisher<GlobalData, Error> {
         guard let url = URL(string: "https://api.coingecko.com/api/v3/global")

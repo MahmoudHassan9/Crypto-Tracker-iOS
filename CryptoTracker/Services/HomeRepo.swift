@@ -12,6 +12,7 @@ protocol HomeRepoProtocol {
     func getCoins() -> AnyPublisher<[CoinModel], Error>
     func getCoinImage(urlString: String) -> AnyPublisher<Data, Error>
     func getMarketStats() -> AnyPublisher<GlobalData, Error>
+    func getCoinDetails(id: String) -> AnyPublisher<CoinDetailModel, Error>
 
 }
 
@@ -26,6 +27,11 @@ struct HomeRepoImp: HomeRepoProtocol {
     ) {
         self.apiCLient = apiCLient
         self.imageCache = imageCache
+    }
+
+    func getCoinDetails(id: String) -> AnyPublisher<CoinDetailModel, any Error>
+    {
+        apiCLient.getCoinDetails(id: id)
     }
 
     func getMarketStats() -> AnyPublisher<GlobalData, any Error> {
