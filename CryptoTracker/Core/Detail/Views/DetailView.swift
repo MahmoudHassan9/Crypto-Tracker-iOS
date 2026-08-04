@@ -35,6 +35,9 @@ struct DetailView: View {
         } else {
             ScrollView {
                 VStack {
+                    ChartView(coin: vm.coin)
+                        .padding(.vertical)
+
                     VStack(spacing: 20) {
                         overviewTitle
                         Divider()
@@ -70,7 +73,7 @@ extension DetailView {
                 .foregroundColor(Color.theme.secondaryText)
             CoinImageView(url: vm.coin.image ?? "")
                 .frame(width: 25, height: 25)
-        }
+        }.padding(.horizontal)
     }
 
     private var overviewTitle: some View {
@@ -123,9 +126,14 @@ extension DetailView {
             spacing: spacing,
             pinnedViews: [],
             content: {
-                ForEach(vm.overviewStatistics) { stat in
-                    StatisticView(stat: stat)
+                if vm.overviewStatistics.isEmpty {
+                    Text("No data available")
+                } else {
+                    ForEach(vm.overviewStatistics) { stat in
+                        StatisticView(stat: stat)
+                    }
                 }
+
             }
         )
     }
